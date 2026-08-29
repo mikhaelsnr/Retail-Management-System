@@ -2,6 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 import { PosClient } from "@/components/pos-client";
 
+type PosBranch = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+type PosProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  selling_price: number;
+  track_serial: boolean;
+};
+
 export default async function PosPage() {
   await requirePermission(["pos.use"]);
 
@@ -22,7 +36,10 @@ export default async function PosPage() {
       )
     `)
     .eq("id", user?.id)
-    .single();
+    .single()
+    .overrideTypes<{
+      branch: PosBranch | null;
+    }>();
 
   const { data: customers } = await supabase
     .from("customers")
@@ -49,7 +66,10 @@ export default async function PosPage() {
       )
     `)
     .eq("branch_id", profile?.branch?.id)
-    .gt("quantity", 0);
+    .gt("quantity", 0)
+    .overrideTypes<Array<{
+      product: PosProduct | null;
+    }>>();
 
   const { data: serials } = await supabase
     .from("serial_numbers")

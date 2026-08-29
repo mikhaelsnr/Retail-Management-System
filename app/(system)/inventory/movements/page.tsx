@@ -2,6 +2,24 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 
+type MovementBranch = {
+  name: string;
+  code: string;
+};
+
+type MovementProduct = {
+  sku: string;
+  name: string;
+};
+
+type MovementSerial = {
+  serial_number: string;
+};
+
+type MovementUser = {
+  full_name: string;
+};
+
 export default async function InventoryMovementsPage() {
   await requirePermission([
     "inventory.view_all",
@@ -36,7 +54,13 @@ export default async function InventoryMovementsPage() {
         full_name
       )
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .overrideTypes<Array<{
+      branch: MovementBranch | null;
+      product: MovementProduct | null;
+      serial: MovementSerial | null;
+      user: MovementUser | null;
+    }>>();
 
   if (error) {
     return (

@@ -9,6 +9,31 @@ type Props = {
   }>;
 };
 
+type SaleBranch = {
+  name: string;
+  code: string;
+};
+
+type SaleCustomer = {
+  customer_code: string | null;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+};
+
+type SaleCashier = {
+  full_name: string;
+};
+
+type SaleProduct = {
+  sku: string;
+  name: string;
+};
+
+type SaleSerial = {
+  serial_number: string;
+};
+
 export default async function SaleDetailPage({
   params,
 }: Props) {
@@ -47,7 +72,12 @@ export default async function SaleDetailPage({
       )
     `)
     .eq("id", id)
-    .single();
+    .single()
+    .overrideTypes<{
+      branch: SaleBranch | null;
+      customer: SaleCustomer | null;
+      cashier: SaleCashier | null;
+    }>();
 
   if (error || !sale) {
     notFound();
@@ -69,7 +99,11 @@ export default async function SaleDetailPage({
         serial_number
       )
     `)
-    .eq("sale_id", id);
+    .eq("sale_id", id)
+    .overrideTypes<Array<{
+      product: SaleProduct | null;
+      serial: SaleSerial | null;
+    }>>();
 
   const { data: payments } = await supabase
     .from("payments")

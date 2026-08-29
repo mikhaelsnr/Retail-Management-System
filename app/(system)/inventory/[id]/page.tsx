@@ -9,6 +9,20 @@ type Props = {
   }>;
 };
 
+type InventoryBranch = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+type InventoryProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  selling_price: number;
+  warranty_months: number;
+};
+
 export default async function InventoryDetailPage({
   params,
 }: Props) {
@@ -44,7 +58,11 @@ export default async function InventoryDetailPage({
       )
     `)
     .eq("id", id)
-    .single();
+    .single()
+    .overrideTypes<{
+      branch: InventoryBranch | null;
+      product: InventoryProduct | null;
+    }>();
 
   if (error || !inventory) {
     notFound();

@@ -9,6 +9,32 @@ type Props = {
   }>;
 };
 
+type ReceiptBranch = {
+  name: string;
+  address: string | null;
+  phone: string | null;
+};
+
+type ReceiptCustomer = {
+  customer_code: string | null;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+};
+
+type ReceiptCashier = {
+  full_name: string;
+};
+
+type ReceiptProduct = {
+  sku: string;
+  name: string;
+};
+
+type ReceiptSerial = {
+  serial_number: string;
+};
+
 export default async function ReceiptPage({
   params,
 }: Props) {
@@ -46,7 +72,12 @@ export default async function ReceiptPage({
       )
     `)
     .eq("id", id)
-    .single();
+    .single()
+    .overrideTypes<{
+      branch: ReceiptBranch | null;
+      customer: ReceiptCustomer | null;
+      cashier: ReceiptCashier | null;
+    }>();
 
   if (error || !sale) {
     notFound();
@@ -67,7 +98,11 @@ export default async function ReceiptPage({
         serial_number
       )
     `)
-    .eq("sale_id", id);
+    .eq("sale_id", id)
+    .overrideTypes<Array<{
+      product: ReceiptProduct | null;
+      serial: ReceiptSerial | null;
+    }>>();
 
   const { data: payments } = await supabase
     .from("payments")

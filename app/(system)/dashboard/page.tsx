@@ -7,6 +7,22 @@ type DashboardProps = {
   }>;
 };
 
+type BranchName = {
+  name: string;
+};
+
+type CustomerName = {
+  full_name: string;
+};
+
+type DashboardProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  cost_price: number;
+  selling_price: number;
+};
+
 export default async function DashboardPage({
   searchParams,
 }: DashboardProps) {
@@ -63,7 +79,10 @@ export default async function DashboardPage({
     .eq("status", "completed")
     .gte("created_at", periodStart.toISOString())
     .lte("created_at", periodEnd.toISOString())
-    .order("created_at");
+    .order("created_at")
+    .overrideTypes<Array<{
+      branch: BranchName | null;
+    }>>();
 
   const { data: periodItems } = await supabase
     .from("sale_items")
@@ -95,7 +114,11 @@ export default async function DashboardPage({
       branch:branches (
         name
       )
-    `);
+    `)
+    .overrideTypes<Array<{
+      product: DashboardProduct | null;
+      branch: BranchName | null;
+    }>>();
 
   const { data: recentSales } = await supabase
     .from("sales")
@@ -115,7 +138,11 @@ export default async function DashboardPage({
     .order("created_at", {
       ascending: false,
     })
-    .limit(5);
+    .limit(5)
+    .overrideTypes<Array<{
+      customer: CustomerName | null;
+      branch: BranchName | null;
+    }>>();
 
   const inventoryValue =
     inventory?.reduce((sum, item) => {

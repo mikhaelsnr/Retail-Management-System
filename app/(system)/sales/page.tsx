@@ -2,6 +2,20 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 
+type SalesBranch = {
+  name: string;
+  code: string;
+};
+
+type SalesCustomer = {
+  customer_code: string | null;
+  full_name: string;
+};
+
+type SalesCashier = {
+  full_name: string;
+};
+
 export default async function SalesPage() {
   await requirePermission([
     "sales.view_all",
@@ -32,7 +46,12 @@ export default async function SalesPage() {
         full_name
       )
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .overrideTypes<Array<{
+      branch: SalesBranch | null;
+      customer: SalesCustomer | null;
+      cashier: SalesCashier | null;
+    }>>();
 
   if (error) {
     return (
