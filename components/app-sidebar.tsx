@@ -15,6 +15,7 @@ import {
   Users,
   UserRound,
 } from "lucide-react";
+import { LogoutButton } from "@/components/logout-button";
 
 type Props = {
   permissions: string[];
@@ -105,6 +106,7 @@ export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed
           <SlidersHorizontal className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />
           {!collapsed && <span>My Preferences</span>}
         </Link>
+        <LogoutButton collapsed={collapsed} />
         {!collapsed && <div><div className="text-sm font-medium">{fullName}</div><div className="text-xs text-muted-foreground">{branchName}</div></div>}
       </div>
     </aside>
