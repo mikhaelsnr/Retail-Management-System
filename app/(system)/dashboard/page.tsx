@@ -4,7 +4,14 @@ import { requirePermission } from "@/lib/require-permission";
 type DashboardProps = {
   searchParams: Promise<{
     period?: string;
+    branch?: string;
   }>;
+};
+
+type DashboardBranch = {
+  id: string;
+  code: string;
+  name: string;
 };
 
 type BranchName = {
@@ -26,7 +33,7 @@ type DashboardProduct = {
 export default async function DashboardPage({
   searchParams,
 }: DashboardProps) {
-  await requirePermission([
+  const { user } = await requirePermission([
     "dashboard.view_all",
     "dashboard.view_branch",
   ]);
@@ -41,6 +48,41 @@ export default async function DashboardPage({
       : "7d";
 
   const supabase = await createClient();
+
+  const [viewAllResult, profileResult, branchesResult] = await Promise.all([
+    supabase.rpc("has_permission", {
+      p_permission: "dashboard.view_all",
+    }),
+    supabase
+      .from("profiles")
+      .select("branch_id")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("branches")
+      .select("id, code, name")
+      .eq("is_active", true)
+      .order("name")
+      .overrideTypes<DashboardBranch[]>(),
+  ]);
+
+  const canViewAllBranches = viewAllResult.data === true;
+  const branches = branchesResult.data ?? [];
+  const requestedBranch = params.branch;
+  const selectedGlobalBranch = branches.find(
+    (branch) => branch.id === requestedBranch
+  );
+  const selectedBranchId = canViewAllBranches
+    ? selectedGlobalBranch?.id ?? null
+    : profileResult.data?.branch_id ?? null;
+  const selectedBranch = branches.find(
+    (branch) => branch.id === selectedBranchId
+  );
+  const periodHref = (nextPeriod: "today" | "7d" | "30d") => {
+    const query = new URLSearchParams({ period: nextPeriod });
+    if (selectedBranchId) query.set("branch", selectedBranchId);
+    return `/dashboard?${query.toString()}`;
+  };
 
   const now = new Date();
 
@@ -66,7 +108,7 @@ export default async function DashboardPage({
 
   periodEnd.setHours(23, 59, 59, 999);
 
-  const { data: periodSales } = await supabase
+  let periodSalesQuery = supabase
     .from("sales")
     .select(`
       id,
@@ -78,13 +120,19 @@ export default async function DashboardPage({
     `)
     .eq("status", "completed")
     .gte("created_at", periodStart.toISOString())
-    .lte("created_at", periodEnd.toISOString())
+    .lte("created_at", periodEnd.toISOString());
+
+  if (selectedBranchId) {
+    periodSalesQuery = periodSalesQuery.eq("branch_id", selectedBranchId);
+  }
+
+  const { data: periodSales } = await periodSalesQuery
     .order("created_at")
     .overrideTypes<Array<{
       branch: BranchName | null;
     }>>();
 
-  const { data: periodItems } = await supabase
+  let periodItemsQuery = supabase
     .from("sale_items")
     .select(`
       quantity,
@@ -97,7 +145,13 @@ export default async function DashboardPage({
     .gte("sale.created_at", periodStart.toISOString())
     .lte("sale.created_at", periodEnd.toISOString());
 
-  const { data: inventory } = await supabase
+  if (selectedBranchId) {
+    periodItemsQuery = periodItemsQuery.eq("sale.branch_id", selectedBranchId);
+  }
+
+  const { data: periodItems } = await periodItemsQuery;
+
+  let inventoryQuery = supabase
     .from("inventory")
     .select(`
       id,
@@ -114,13 +168,19 @@ export default async function DashboardPage({
       branch:branches (
         name
       )
-    `)
+    `);
+
+  if (selectedBranchId) {
+    inventoryQuery = inventoryQuery.eq("branch_id", selectedBranchId);
+  }
+
+  const { data: inventory } = await inventoryQuery
     .overrideTypes<Array<{
       product: DashboardProduct | null;
       branch: BranchName | null;
     }>>();
 
-  const { data: recentSales } = await supabase
+  let recentSalesQuery = supabase
     .from("sales")
     .select(`
       id,
@@ -134,7 +194,13 @@ export default async function DashboardPage({
         name
       )
     `)
-    .eq("status", "completed")
+    .eq("status", "completed");
+
+  if (selectedBranchId) {
+    recentSalesQuery = recentSalesQuery.eq("branch_id", selectedBranchId);
+  }
+
+  const { data: recentSales } = await recentSalesQuery
     .order("created_at", {
       ascending: false,
     })
@@ -361,9 +427,39 @@ export default async function DashboardPage({
           </p>
         </div>
 
-        <div className="flex rounded-lg border p-1">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {canViewAllBranches ? (
+            <form className="flex items-center gap-2">
+              <input type="hidden" name="period" value={period} />
+              <label htmlFor="dashboard-branch" className="sr-only">
+                Dashboard branch
+              </label>
+              <select
+                id="dashboard-branch"
+                name="branch"
+                defaultValue={selectedBranchId ?? "all"}
+                className="rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="all">All Branches</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name} ({branch.code})
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="tz-primary rounded-md px-3 py-2 text-sm font-medium">
+                Apply
+              </button>
+            </form>
+          ) : (
+            <span className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+              {selectedBranch?.name ?? "Assigned Branch"}
+            </span>
+          )}
+
+          <div className="flex rounded-lg border p-1">
           <a
-            href="/dashboard?period=today"
+            href={periodHref("today")}
             className={`rounded-md px-4 py-2 text-sm ${
               period === "today"
                 ? "bg-white text-black"
@@ -374,7 +470,7 @@ export default async function DashboardPage({
           </a>
 
           <a
-            href="/dashboard?period=7d"
+            href={periodHref("7d")}
             className={`rounded-md px-4 py-2 text-sm ${
               period === "7d"
                 ? "bg-white text-black"
@@ -385,7 +481,7 @@ export default async function DashboardPage({
           </a>
 
           <a
-            href="/dashboard?period=30d"
+            href={periodHref("30d")}
             className={`rounded-md px-4 py-2 text-sm ${
               period === "30d"
                 ? "bg-white text-black"
@@ -394,6 +490,7 @@ export default async function DashboardPage({
           >
             30 Days
           </a>
+          </div>
         </div>
       </div>
 
