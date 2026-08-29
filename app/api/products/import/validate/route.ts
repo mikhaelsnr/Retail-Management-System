@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 
 const normalize = (value: string) =>
-  value.toLowerCase().replace(/*/g, "").replace(/s+/g, " ").trim();
+  value.toLowerCase().replace(/\*/g, "").replace(/\s+/g, " ").trim();
 const text = (value: unknown) => String(value ?? "").trim();
 
 export async function POST(request: Request) {
@@ -18,7 +18,10 @@ export async function POST(request: Request) {
 
   try {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(await file.arrayBuffer()));
+    const workbookData = Buffer.from(
+      await file.arrayBuffer()
+    ) as unknown as Parameters<typeof workbook.xlsx.load>[0];
+    await workbook.xlsx.load(workbookData);
     const sheet = workbook.getWorksheet("Product_Inventory_Import") ?? workbook.worksheets[0];
     if (!sheet) throw new Error("The workbook contains no import sheet.");
 
@@ -35,8 +38,12 @@ export async function POST(request: Request) {
     const rawRows: Array<Record<string, unknown>> = [];
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
+      let hasValue = false;
+      row.eachCell({ includeEmpty: false }, (cell) => {
+        if (text(cell.value)) hasValue = true;
+      });
+      if (!hasValue) return;
       const sku = text(get(row, "sku"));
-      if (!sku && row.values.slice(1).every((value) => text(value) === "")) return;
       rawRows.push({
         row_number: rowNumber,
         sku: sku.toUpperCase(),
@@ -128,6 +135,20 @@ export async function POST(request: Request) {
       if (!product && canManageProducts !== true) errors.push("products.manage is required to create this product.");
       if (raw.barcode && products?.some((item) => item.barcode === raw.barcode && item.id !== product?.id)) errors.push("Barcode already belongs to another product.");
       if (product) {
+        if (
+          product.track_serial &&
+          (quantity ?? 0) > 0 &&
+          serialNumbers.length !== quantity
+        ) {
+          errors.push(
+            "Existing product requires serial numbers matching Opening Quantity."
+          );
+        }
+        if (!product.track_serial && serialNumbers.length > 0) {
+          errors.push(
+            "Existing product does not use serial tracking; remove Serial Numbers."
+          );
+        }
         const differences = [
           product.name !== raw.product_name && "name",
           Number(product.cost_price) !== cost && "cost",

@@ -1,8 +1,6 @@
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 const headers = [
   "SKU*", "Product Name*", "Brand", "Category", "Description",
   "Cost Price*", "Selling Price*", "Barcode", "Warranty Months",

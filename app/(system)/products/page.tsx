@@ -15,17 +15,24 @@ export default async function ProductsPage({
   await requirePermission([
     "products.view",
     "products.manage",
+    "inventory.manage_all",
+    "inventory.manage_branch",
   ]);
 
   const supabase = await createClient();
   const params = await searchParams;
 
-  const { data: canManageProducts } = await supabase.rpc(
-    "has_permission",
-    {
-      p_permission: "products.manage",
-    }
-  );
+  const [
+    { data: canManageProducts },
+    { data: canManageAllInventory },
+    { data: canManageBranchInventory },
+  ] = await Promise.all([
+    supabase.rpc("has_permission", { p_permission: "products.manage" }),
+    supabase.rpc("has_permission", { p_permission: "inventory.manage_all" }),
+    supabase.rpc("has_permission", { p_permission: "inventory.manage_branch" }),
+  ]);
+  const canImportInventory =
+    canManageAllInventory === true || canManageBranchInventory === true;
 
   const { data: products, error } = await supabase
     .from("products")
@@ -78,14 +85,32 @@ export default async function ProductsPage({
           </p>
         </div>
 
-        {canManageProducts === true && (
-          <Link
-            href="/products/new"
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black"
-          >
-            Add Product
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canImportInventory && (
+            <>
+              <Link
+                href="/api/products/import/template"
+                className="rounded-md border px-4 py-2 text-sm font-medium"
+              >
+                Download Template
+              </Link>
+              <Link
+                href="/products/import"
+                className="rounded-md border px-4 py-2 text-sm font-medium"
+              >
+                Import Excel
+              </Link>
+            </>
+          )}
+          {canManageProducts === true && (
+            <Link
+              href="/products/new"
+              className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black"
+            >
+              Add Product
+            </Link>
+          )}
+        </div>
       </div>
 
       {params.success && (
