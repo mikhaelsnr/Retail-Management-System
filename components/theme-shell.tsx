@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 
 export type AppearancePreferences = {
-  theme: "plain_dark" | "plain_light" | "modern_dark" | "studio_dark" | "light_retail" | "hybrid" | "blue_accent";
+  theme: "plain_dark" | "plain_light" | "modern_dark" | "studio_dark" | "light_retail" | "hybrid";
   density: "comfortable" | "compact";
   sidebar_default: "expanded" | "collapsed";
 };

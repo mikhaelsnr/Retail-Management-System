@@ -12,7 +12,6 @@ const themes = [
   ["studio_dark", "Studio dark workspace"],
   ["light_retail", "Light retail POS"],
   ["hybrid", "Dark POS + light management"],
-  ["blue_accent", "TechZone blue accent"],
 ] as const;
 
 export function PreferencesForm({

@@ -1,7 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
 
@@ -11,21 +9,33 @@ type LogoutButtonProps = {
 };
 
 export function LogoutButton({ collapsed = false, showIcon = true }: LogoutButtonProps) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const logout = async () => {
     setIsLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
+    setFailed(false);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
 
-    if (error) {
+    try {
+      const response = await fetch("/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      window.location.replace("/auth/login");
+    } catch {
+      setFailed(true);
       setIsLoading(false);
-      return;
+    } finally {
+      window.clearTimeout(timeout);
     }
-
-    router.replace("/auth/login");
-    router.refresh();
   };
 
   return (
@@ -40,7 +50,11 @@ export function LogoutButton({ collapsed = false, showIcon = true }: LogoutButto
       }
     >
       {showIcon && <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />}
-      {!collapsed && <span>{isLoading ? "Logging out..." : "Logout"}</span>}
+      {!collapsed && (
+        <span>
+          {isLoading ? "Logging out..." : failed ? "Retry logout" : "Logout"}
+        </span>
+      )}
     </button>
   );
 }

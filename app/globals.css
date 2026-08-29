@@ -152,17 +152,6 @@
     box-shadow: none;
   }
 
-  .tz-shell[data-theme="blue_accent"] {
-    --background: 222 24% 8%;
-    --card: 220 22% 11%;
-    --primary: 204 92% 55%;
-    --primary-foreground: 222 35% 9%;
-    --ring: 190 92% 52%;
-    --chart-1: 199 92% 55%;
-    --accent: 207 70% 18%;
-    --accent-foreground: 195 90% 90%;
-  }
-
   .tz-shell[data-theme="studio_dark"] {
     --background: 150 5% 7%;
     --foreground: 150 5% 92%;
@@ -209,14 +198,6 @@
   }
   .tz-nav-item svg { color: hsl(var(--muted-foreground)); }
   .tz-nav-item.is-active svg { color: hsl(var(--foreground)); }
-  .tz-shell[data-theme="blue_accent"] .tz-nav-item.is-active {
-    background: hsl(var(--primary) / 0.14);
-    color: hsl(var(--primary));
-    box-shadow: inset 2px 0 0 hsl(var(--primary));
-  }
-  .tz-shell[data-theme="blue_accent"] .tz-nav-item.is-active svg {
-    color: hsl(var(--primary));
-  }
   .tz-shell table { background: hsl(var(--card)); }
   .tz-shell thead { background: hsl(var(--muted) / 0.65); }
   .tz-shell tbody tr { transition: background-color 150ms ease; }
