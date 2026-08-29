@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
+import { DashboardFilters } from "@/components/dashboard-filters";
 
 type DashboardProps = {
   searchParams: Promise<{
@@ -78,11 +79,6 @@ export default async function DashboardPage({
   const selectedBranch = branches.find(
     (branch) => branch.id === selectedBranchId
   );
-  const periodHref = (nextPeriod: "today" | "7d" | "30d") => {
-    const query = new URLSearchParams({ period: nextPeriod });
-    if (selectedBranchId) query.set("branch", selectedBranchId);
-    return `/dashboard?${query.toString()}`;
-  };
 
   const now = new Date();
 
@@ -427,71 +423,25 @@ export default async function DashboardPage({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {canViewAllBranches ? (
-            <form className="flex items-center gap-2">
-              <input type="hidden" name="period" value={period} />
-              <label htmlFor="dashboard-branch" className="sr-only">
-                Dashboard branch
-              </label>
-              <select
-                id="dashboard-branch"
-                name="branch"
-                defaultValue={selectedBranchId ?? "all"}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
-              >
-                <option value="all">All Branches</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name} ({branch.code})
-                  </option>
-                ))}
-              </select>
-              <button type="submit" className="tz-primary rounded-md px-3 py-2 text-sm font-medium">
-                Apply
-              </button>
-            </form>
-          ) : (
+        {canViewAllBranches ? (
+          <DashboardFilters
+            branches={branches}
+            selectedBranchId={selectedBranchId}
+            period={period}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <span className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
               {selectedBranch?.name ?? "Assigned Branch"}
             </span>
-          )}
-
-          <div className="flex rounded-lg border p-1">
-          <a
-            href={periodHref("today")}
-            className={`rounded-md px-4 py-2 text-sm ${
-              period === "today"
-                ? "bg-white text-black"
-                : ""
-            }`}
-          >
-            Today
-          </a>
-
-          <a
-            href={periodHref("7d")}
-            className={`rounded-md px-4 py-2 text-sm ${
-              period === "7d"
-                ? "bg-white text-black"
-                : ""
-            }`}
-          >
-            7 Days
-          </a>
-
-          <a
-            href={periodHref("30d")}
-            className={`rounded-md px-4 py-2 text-sm ${
-              period === "30d"
-                ? "bg-white text-black"
-                : ""
-            }`}
-          >
-            30 Days
-          </a>
+            <DashboardFilters
+              branches={[]}
+              selectedBranchId={null}
+              period={period}
+              showBranchSelector={false}
+            />
           </div>
-        </div>
+        )}
       </div>
 
       <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
