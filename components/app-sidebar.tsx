@@ -22,6 +22,7 @@ type Props = {
   fullName: string;
   branchName: string;
   defaultCollapsed: boolean;
+  plain?: boolean;
 };
 
 const sections = [
@@ -42,9 +43,9 @@ const sections = [
   ] },
 ] as const;
 
-export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed }: Props) {
+export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed, plain = false }: Props) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [collapsed, setCollapsed] = useState(plain ? false : defaultCollapsed);
 
   return (
     <aside className={"tz-sidebar sticky top-0 flex h-screen shrink-0 flex-col border-r transition-all " + (collapsed ? "w-20 p-3" : "w-64 p-4")}>
@@ -53,14 +54,14 @@ export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed
           <div className="text-lg font-bold">{collapsed ? "TZ" : "TechZone POS"}</div>
           {!collapsed && <div className="mt-1 text-xs text-muted-foreground">{branchName}</div>}
         </div>
-        <button
+        {!plain && <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
           className="tz-icon-button rounded-lg border px-2 py-1 text-sm"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? "›" : "‹"}
-        </button>
+        </button>}
       </div>
 
       <nav className="mt-7">
@@ -90,7 +91,7 @@ export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed
                       title={collapsed ? label : undefined}
                       className={"tz-nav-item flex items-center rounded-md px-3 py-2 text-sm font-medium " + (active ? "is-active " : "") + (collapsed ? "justify-center" : "gap-3")}
                     >
-                      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />
+                      {!plain && <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />}
                       {!collapsed && <span>{label}</span>}
                     </Link>
                   );
@@ -103,10 +104,10 @@ export function AppSidebar({ permissions, fullName, branchName, defaultCollapsed
 
       <div className="mt-auto space-y-3 border-t pt-4">
         <Link href="/settings/preferences" className={"tz-nav-item flex items-center rounded-md px-3 py-2 text-sm " + (pathname === "/settings/preferences" ? "is-active" : "") + (collapsed ? " justify-center" : " gap-3")}>
-          <SlidersHorizontal className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />
+          {!plain && <SlidersHorizontal className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />}
           {!collapsed && <span>My Preferences</span>}
         </Link>
-        <LogoutButton collapsed={collapsed} />
+        <LogoutButton collapsed={collapsed} showIcon={!plain} />
         {!collapsed && <div><div className="text-sm font-medium">{fullName}</div><div className="text-xs text-muted-foreground">{branchName}</div></div>}
       </div>
     </aside>

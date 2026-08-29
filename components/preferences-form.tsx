@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { AppearancePreferences } from "@/components/theme-shell";
 
 const themes = [
+  ["plain_dark", "Plain dark"],
+  ["plain_light", "Plain light"],
   ["modern_dark", "Modern dark enterprise"],
   ["studio_dark", "Studio dark workspace"],
   ["light_retail", "Light retail POS"],

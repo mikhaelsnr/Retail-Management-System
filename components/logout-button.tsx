@@ -7,9 +7,10 @@ import { useState } from "react";
 
 type LogoutButtonProps = {
   collapsed?: boolean;
+  showIcon?: boolean;
 };
 
-export function LogoutButton({ collapsed = false }: LogoutButtonProps) {
+export function LogoutButton({ collapsed = false, showIcon = true }: LogoutButtonProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +39,7 @@ export function LogoutButton({ collapsed = false }: LogoutButtonProps) {
         (collapsed ? "justify-center" : "gap-3")
       }
     >
-      <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />
+      {showIcon && <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />}
       {!collapsed && <span>{isLoading ? "Logging out..." : "Logout"}</span>}
     </button>
   );

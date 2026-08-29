@@ -82,7 +82,7 @@ async function AuthenticatedSystemLayout({
 
   const preferences: AppearancePreferences =
     (preferenceData as AppearancePreferences | null) ?? {
-      theme: "modern_dark",
+      theme: "plain_dark",
       density: "comfortable",
       sidebar_default: "expanded",
     };
@@ -95,6 +95,7 @@ async function AuthenticatedSystemLayout({
         fullName={profile.full_name ?? user.email ?? "User"}
         branchName={branch?.name ?? "No branch"}
         defaultCollapsed={preferences.sidebar_default === "collapsed"}
+        plain={preferences.theme === "plain_dark" || preferences.theme === "plain_light"}
       />}
     >
       {children}

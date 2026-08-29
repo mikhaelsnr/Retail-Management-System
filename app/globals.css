@@ -101,6 +101,57 @@
     --ring: 212 90% 48%;
   }
 
+  .tz-shell[data-theme="plain_dark"] {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 94%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 94%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 22%;
+    --input: 0 0% 28%;
+    --primary: 0 0% 94%;
+    --primary-foreground: 0 0% 7%;
+    --ring: 0 0% 55%;
+  }
+
+  .tz-shell[data-theme="plain_light"] {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+    --border: 0 0% 78%;
+    --input: 0 0% 72%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 0 0% 45%;
+  }
+
+  .tz-shell[data-theme="plain_dark"] .tz-main,
+  .tz-shell[data-theme="plain_dark"] .tz-sidebar,
+  .tz-shell[data-theme="plain_light"] .tz-main,
+  .tz-shell[data-theme="plain_light"] .tz-sidebar {
+    background: hsl(var(--background));
+    background-image: none;
+  }
+
+  .tz-shell[data-theme="plain_dark"] .tz-card,
+  .tz-shell[data-theme="plain_dark"] main > section,
+  .tz-shell[data-theme="plain_dark"] main > div.rounded-lg.border,
+  .tz-shell[data-theme="plain_light"] .tz-card,
+  .tz-shell[data-theme="plain_light"] main > section,
+  .tz-shell[data-theme="plain_light"] main > div.rounded-lg.border {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .tz-shell[data-theme="plain_dark"] .tz-nav-item.is-active,
+  .tz-shell[data-theme="plain_light"] .tz-nav-item.is-active {
+    box-shadow: none;
+  }
+
   .tz-shell[data-theme="blue_accent"] {
     --background: 222 24% 8%;
     --card: 220 22% 11%;

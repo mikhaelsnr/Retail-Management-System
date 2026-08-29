@@ -4,7 +4,7 @@ import { PreferencesForm } from "@/components/preferences-form";
 import type { AppearancePreferences } from "@/components/theme-shell";
 
 const defaults: AppearancePreferences = {
-  theme: "modern_dark",
+  theme: "plain_dark",
   density: "comfortable",
   sidebar_default: "expanded",
 };
