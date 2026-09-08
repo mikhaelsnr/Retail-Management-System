@@ -1,8 +1,7 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserContext } from "@/lib/get-user-context";
 import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeShell, type AppearancePreferences } from "@/components/theme-shell";
+import { ThemeShell } from "@/components/theme-shell";
 
 export default function SystemLayout({
   children,
@@ -21,71 +20,7 @@ async function AuthenticatedSystemLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/auth/login");
-  }
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select(`
-      id,
-      full_name,
-      phone,
-      is_active,
-      role:roles!profiles_role_id_fkey (
-        id,
-        name
-      ),
-      branch:branches!profiles_branch_id_fkey (
-        id,
-        code,
-        name
-      )
-    `)
-    .eq("id", user.id)
-    .single();
-
-  if (error || !profile) {
-    redirect("/auth/login");
-  }
-
-  type ProfileBranch = {
-    id: string;
-    code: string;
-    name: string;
-  };
-
-  const branch = profile.branch as unknown as ProfileBranch | null;
-
-  const { data: permissionData } = await supabase.rpc(
-    "get_my_permissions"
-  );
-
-  const permissions: string[] = Array.isArray(permissionData)
-    ? permissionData.filter(
-        (permission): permission is string =>
-          typeof permission === "string"
-      )
-    : [];
-
-  const { data: preferenceData } = await supabase
-    .from("user_preferences")
-    .select("theme, density, sidebar_default")
-    .eq("profile_id", user.id)
-    .maybeSingle();
-
-  const preferences: AppearancePreferences =
-    (preferenceData as AppearancePreferences | null) ?? {
-      theme: "plain_dark",
-      density: "comfortable",
-      sidebar_default: "expanded",
-    };
+  const { user, profile, branch, permissions, preferences } = await getCurrentUserContext();
 
   return (
     <ThemeShell

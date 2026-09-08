@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/pagination";
+import { getPage, PAGE_SIZE, type PageSearchParams } from "@/lib/pagination";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
@@ -16,7 +18,9 @@ type SalesCashier = {
   full_name: string;
 };
 
-export default async function SalesPage() {
+export default async function SalesPage({ searchParams }: { searchParams: Promise<PageSearchParams> }) {
+  const params = await searchParams;
+  const page = getPage(params);
   await requirePermission([
     "sales.view_all",
     "sales.view_branch",
@@ -24,7 +28,7 @@ export default async function SalesPage() {
 
   const supabase = await createClient();
 
-  const { data: sales, error } = await supabase
+  const { data: salesRows, error } = await supabase
     .from("sales")
     .select(`
       id,
@@ -47,11 +51,15 @@ export default async function SalesPage() {
       )
     `)
     .order("created_at", { ascending: false })
+    .order("id")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     .overrideTypes<Array<{
       branch: SalesBranch | null;
       customer: SalesCustomer | null;
       cashier: SalesCashier | null;
     }>>();
+
+  const sales = salesRows?.slice(0, PAGE_SIZE);
 
   if (error) {
     return (
@@ -203,6 +211,7 @@ export default async function SalesPage() {
           </tbody>
         </table>
       </div>
+      <Pagination path="/sales" params={params} page={page} hasNext={(salesRows?.length ?? 0) > PAGE_SIZE} />
     </main>
   );
 }

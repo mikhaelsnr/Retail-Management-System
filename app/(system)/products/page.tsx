@@ -1,18 +1,18 @@
+import { Pagination } from "@/components/pagination";
+import { getPage, PAGE_SIZE, type PageSearchParams } from "@/lib/pagination";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 import { StatusBadge } from "@/components/status-badge";
 
 type ProductsPageProps = {
-  searchParams: Promise<{
-    success?: string;
-  }>;
+  searchParams: Promise<PageSearchParams>;
 };
 
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
-  await requirePermission([
+  const { permissions } = await requirePermission([
     "products.view",
     "products.manage",
     "inventory.manage_all",
@@ -21,20 +21,12 @@ export default async function ProductsPage({
 
   const supabase = await createClient();
   const params = await searchParams;
+  const page = getPage(params);
 
-  const [
-    { data: canManageProducts },
-    { data: canManageAllInventory },
-    { data: canManageBranchInventory },
-  ] = await Promise.all([
-    supabase.rpc("has_permission", { p_permission: "products.manage" }),
-    supabase.rpc("has_permission", { p_permission: "inventory.manage_all" }),
-    supabase.rpc("has_permission", { p_permission: "inventory.manage_branch" }),
-  ]);
-  const canImportInventory =
-    canManageAllInventory === true || canManageBranchInventory === true;
+  const canManageProducts = permissions.includes("products.manage");
+  const canImportInventory = permissions.includes("inventory.manage_all") || permissions.includes("inventory.manage_branch");
 
-  const { data: products, error } = await supabase
+  const { data: productsRows, error } = await supabase
     .from("products")
     .select(`
       id,
@@ -52,7 +44,11 @@ export default async function ProductsPage({
         name
       )
     `)
-    .order("name");
+    .order("name")
+    .order("id")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const products = productsRows?.slice(0, PAGE_SIZE);
 
   const normalizedProducts = products?.map((product) => ({
     ...product,
@@ -184,6 +180,7 @@ export default async function ProductsPage({
           </tbody>
         </table>
       </div>
+      <Pagination path="/products" params={params} page={page} hasNext={(productsRows?.length ?? 0) > PAGE_SIZE} />
     </main>
   );
 }

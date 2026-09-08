@@ -34,7 +34,7 @@ type DashboardProduct = {
 export default async function DashboardPage({
   searchParams,
 }: DashboardProps) {
-  const { user } = await requirePermission([
+  const { profile, permissions } = await requirePermission([
     "dashboard.view_all",
     "dashboard.view_branch",
   ]);
@@ -50,24 +50,11 @@ export default async function DashboardPage({
 
   const supabase = await createClient();
 
-  const [viewAllResult, profileResult, branchesResult] = await Promise.all([
-    supabase.rpc("has_permission", {
-      p_permission: "dashboard.view_all",
-    }),
-    supabase
-      .from("profiles")
-      .select("branch_id")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("branches")
-      .select("id, code, name")
-      .eq("is_active", true)
-      .order("name")
-      .overrideTypes<DashboardBranch[]>(),
-  ]);
-
-  const canViewAllBranches = viewAllResult.data === true;
+  const branchesResult = await supabase.from("branches")
+    .select("id, code, name").eq("is_active", true).order("name")
+    .overrideTypes<DashboardBranch[]>();
+  if (branchesResult.error) throw new Error("Failed to load dashboard branches.");
+  const canViewAllBranches = permissions.includes("dashboard.view_all");
   const branches = branchesResult.data ?? [];
   const requestedBranch = params.branch;
   const selectedGlobalBranch = branches.find(
@@ -75,7 +62,7 @@ export default async function DashboardPage({
   );
   const selectedBranchId = canViewAllBranches
     ? selectedGlobalBranch?.id ?? null
-    : profileResult.data?.branch_id ?? null;
+    : profile.branch_id ?? null;
   const selectedBranch = branches.find(
     (branch) => branch.id === selectedBranchId
   );
@@ -122,12 +109,6 @@ export default async function DashboardPage({
     periodSalesQuery = periodSalesQuery.eq("branch_id", selectedBranchId);
   }
 
-  const { data: periodSales } = await periodSalesQuery
-    .order("created_at")
-    .overrideTypes<Array<{
-      branch: BranchName | null;
-    }>>();
-
   let periodItemsQuery = supabase
     .from("sale_items")
     .select(`
@@ -145,7 +126,6 @@ export default async function DashboardPage({
     periodItemsQuery = periodItemsQuery.eq("sale.branch_id", selectedBranchId);
   }
 
-  const { data: periodItems } = await periodItemsQuery;
 
   let inventoryQuery = supabase
     .from("inventory")
@@ -170,12 +150,6 @@ export default async function DashboardPage({
     inventoryQuery = inventoryQuery.eq("branch_id", selectedBranchId);
   }
 
-  const { data: inventory } = await inventoryQuery
-    .overrideTypes<Array<{
-      product: DashboardProduct | null;
-      branch: BranchName | null;
-    }>>();
-
   let recentSalesQuery = supabase
     .from("sales")
     .select(`
@@ -196,7 +170,19 @@ export default async function DashboardPage({
     recentSalesQuery = recentSalesQuery.eq("branch_id", selectedBranchId);
   }
 
-  const { data: recentSales } = await recentSalesQuery
+  const [salesResult, itemsResult, inventoryResult, recentResult] = await Promise.all([
+    periodSalesQuery
+    .order("created_at")
+    .overrideTypes<Array<{
+      branch: BranchName | null;
+    }>>(),
+    periodItemsQuery,
+    inventoryQuery
+    .overrideTypes<Array<{
+      product: DashboardProduct | null;
+      branch: BranchName | null;
+    }>>(),
+    recentSalesQuery
     .order("created_at", {
       ascending: false,
     })
@@ -204,7 +190,15 @@ export default async function DashboardPage({
     .overrideTypes<Array<{
       customer: CustomerName | null;
       branch: BranchName | null;
-    }>>();
+    }>>(),
+  ]);
+  if (salesResult.error || itemsResult.error || inventoryResult.error || recentResult.error) {
+    return <main className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1><p className="mt-4 text-red-500">Failed to load dashboard data. Please try again.</p></main>;
+  }
+  const { data: periodSales } = salesResult;
+  const { data: periodItems } = itemsResult;
+  const { data: inventory } = inventoryResult;
+  const { data: recentSales } = recentResult;
 
   const inventoryValue =
     inventory?.reduce((sum, item) => {

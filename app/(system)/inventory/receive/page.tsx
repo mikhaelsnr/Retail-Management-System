@@ -3,44 +3,14 @@ import { requirePermission } from "@/lib/require-permission";
 import { ReceiveStockForm } from "@/components/receive-stock-form";
 
 export default async function ReceiveStockPage() {
-  const { user } = await requirePermission([
+  const { branch: assignedBranch, permissions } = await requirePermission([
     "inventory.manage_all",
     "inventory.manage_branch",
   ]);
 
   const supabase = await createClient();
 
-  const { data: canManageAll } = await supabase.rpc(
-    "has_permission",
-    {
-      p_permission: "inventory.manage_all",
-    }
-  );
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(`
-      branch_id,
-      branch:branches!profiles_branch_id_fkey (
-        id,
-        name,
-        code
-      )
-    `)
-    .eq("id", user.id)
-    .single();
-
-  type Branch = {
-    id: string;
-    name: string;
-    code: string;
-  };
-
-  const assignedBranch = (Array.isArray(profile?.branch)
-    ? profile.branch[0]
-    : profile?.branch) as Branch | null | undefined;
-
-  const hasGlobalManagement = canManageAll === true;
+  const hasGlobalManagement = permissions.includes("inventory.manage_all");
 
   const { data: allBranches } = hasGlobalManagement
     ? await supabase

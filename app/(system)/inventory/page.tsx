@@ -1,11 +1,15 @@
+import { Pagination } from "@/components/pagination";
+import { getPage, PAGE_SIZE, type PageSearchParams } from "@/lib/pagination";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 import { EditReorderLevel } from "@/components/edit-reorder-level";
 import { StatusBadge } from "@/components/status-badge";
 
-export default async function InventoryPage() {
-  const { user } = await requirePermission([
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<PageSearchParams> }) {
+  const params = await searchParams;
+  const page = getPage(params);
+  const { profile, permissions } = await requirePermission([
     "inventory.view_all",
     "inventory.view_branch",
     "inventory.manage_all",
@@ -14,22 +18,10 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: canManageAll }, { data: canManageBranch }, { data: profile }] =
-    await Promise.all([
-      supabase.rpc("has_permission", {
-        p_permission: "inventory.manage_all",
-      }),
-      supabase.rpc("has_permission", {
-        p_permission: "inventory.manage_branch",
-      }),
-      supabase
-        .from("profiles")
-        .select("branch_id")
-        .eq("id", user.id)
-        .single(),
-    ]);
+  const canManageAll = permissions.includes("inventory.manage_all");
+  const canManageBranch = permissions.includes("inventory.manage_branch");
 
-  const { data: inventory, error } = await supabase
+  const { data: inventoryRows, error } = await supabase
     .from("inventory")
     .select(`
       id,
@@ -39,16 +31,18 @@ export default async function InventoryPage() {
       product:products (
         id,
         sku,
-        name,
-        selling_price
+        name
       ),
       branch:branches (
         id,
-        code,
         name
       )
     `)
-    .order("created_at");
+    .order("created_at")
+    .order("id")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const inventory = inventoryRows?.slice(0, PAGE_SIZE);
 
   if (error) {
     return (
@@ -213,6 +207,7 @@ export default async function InventoryPage() {
           </tbody>
         </table>
       </div>
+      <Pagination path="/inventory" params={params} page={page} hasNext={(inventoryRows?.length ?? 0) > PAGE_SIZE} />
     </main>
   );
 }

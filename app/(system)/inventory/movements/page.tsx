@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/pagination";
+import { getPage, PAGE_SIZE, type PageSearchParams } from "@/lib/pagination";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
@@ -20,7 +22,9 @@ type MovementUser = {
   full_name: string;
 };
 
-export default async function InventoryMovementsPage() {
+export default async function InventoryMovementsPage({ searchParams }: { searchParams: Promise<PageSearchParams> }) {
+  const params = await searchParams;
+  const page = getPage(params);
   await requirePermission([
     "inventory.view_all",
     "inventory.view_branch",
@@ -30,13 +34,12 @@ export default async function InventoryMovementsPage() {
 
   const supabase = await createClient();
 
-  const { data: movements, error } = await supabase
+  const { data: movementsRows, error } = await supabase
     .from("inventory_movements")
     .select(`
       id,
       movement_type,
       quantity,
-      reference_type,
       notes,
       created_at,
       branch:branches (
@@ -55,12 +58,16 @@ export default async function InventoryMovementsPage() {
       )
     `)
     .order("created_at", { ascending: false })
+    .order("id")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     .overrideTypes<Array<{
       branch: MovementBranch | null;
       product: MovementProduct | null;
       serial: MovementSerial | null;
       user: MovementUser | null;
     }>>();
+
+  const movements = movementsRows?.slice(0, PAGE_SIZE);
 
   if (error) {
     return (
@@ -175,6 +182,7 @@ export default async function InventoryMovementsPage() {
           </tbody>
         </table>
       </div>
+      <Pagination path="/inventory/movements" params={params} page={page} hasNext={(movementsRows?.length ?? 0) > PAGE_SIZE} />
     </main>
   );
 }

@@ -2,12 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 import { PosClient } from "@/components/pos-client";
 
-type PosBranch = {
-  id: string;
-  name: string;
-  code: string;
-};
-
 type PosProduct = {
   id: string;
   sku: string;
@@ -17,31 +11,12 @@ type PosProduct = {
 };
 
 export default async function PosPage() {
-  await requirePermission(["pos.use"]);
+  const { profile } = await requirePermission(["pos.use"]);
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(`
-      id,
-      branch:branches (
-        id,
-        name,
-        code
-      )
-    `)
-    .eq("id", user?.id)
-    .single()
-    .overrideTypes<{
-      branch: PosBranch | null;
-    }>();
-
-  const { data: customers } = await supabase
+  const [customersResult, inventoryResult, serialsResult] = await Promise.all([
+    supabase
     .from("customers")
     .select(`
       id,
@@ -50,9 +25,8 @@ export default async function PosPage() {
       phone
     `)
     .eq("is_active", true)
-    .order("full_name");
-
-  const { data: inventory } = await supabase
+    .order("full_name"),
+    supabase
     .from("inventory")
     .select(`
       id,
@@ -69,9 +43,8 @@ export default async function PosPage() {
     .gt("quantity", 0)
     .overrideTypes<Array<{
       product: PosProduct | null;
-    }>>();
-
-  const { data: serials } = await supabase
+    }>>(),
+    supabase
     .from("serial_numbers")
     .select(`
       id,
@@ -81,7 +54,14 @@ export default async function PosPage() {
     `)
     .eq("branch_id", profile?.branch?.id)
     .eq("status", "available")
-    .order("serial_number");
+    .order("serial_number"),
+  ]);
+  if (customersResult.error || inventoryResult.error || serialsResult.error) {
+    return <main className="p-6"><p className="text-red-500">Failed to load POS data. Please try again.</p></main>;
+  }
+  const { data: customers } = customersResult;
+  const { data: inventory } = inventoryResult;
+  const { data: serials } = serialsResult;
 
   return (
     <main className="tz-pos p-6">

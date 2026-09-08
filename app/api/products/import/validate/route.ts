@@ -67,18 +67,19 @@ export async function POST(request: Request) {
     const [
       { data: branches },
       { data: products },
-      { data: canManageAll },
-      { data: canManageBranch },
-      { data: canManageProducts },
+      { data: permissions, error: permissionError },
       { data: profile },
     ] = await Promise.all([
       supabase.from("branches").select("id, code, name").eq("is_active", true),
       supabase.from("products").select("id, sku, name, cost_price, selling_price, barcode, warranty_months, track_serial"),
-      supabase.rpc("has_permission", { p_permission: "inventory.manage_all" }),
-      supabase.rpc("has_permission", { p_permission: "inventory.manage_branch" }),
-      supabase.rpc("has_permission", { p_permission: "products.manage" }),
+      supabase.rpc("get_my_permissions"),
       supabase.from("profiles").select("branch_id").eq("id", user.id).single(),
     ]);
+
+    if (permissionError) throw new Error("Failed to load import permissions.");
+    const canManageAll = Array.isArray(permissions) && permissions.includes("inventory.manage_all");
+    const canManageBranch = Array.isArray(permissions) && permissions.includes("inventory.manage_branch");
+    const canManageProducts = Array.isArray(permissions) && permissions.includes("products.manage");
 
     const allSerials = rawRows.flatMap((row) =>
       text(row.serial_text).split(";").map((serial) => serial.trim()).filter(Boolean)

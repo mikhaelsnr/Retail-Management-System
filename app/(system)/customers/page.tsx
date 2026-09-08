@@ -1,9 +1,13 @@
+import { Pagination } from "@/components/pagination";
+import { getPage, PAGE_SIZE, type PageSearchParams } from "@/lib/pagination";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/require-permission";
 import { StatusBadge } from "@/components/status-badge";
 
-export default async function CustomersPage() {
+export default async function CustomersPage({ searchParams }: { searchParams: Promise<PageSearchParams> }) {
+  const params = await searchParams;
+  const page = getPage(params);
   await requirePermission([
     "customers.view",
     "customers.manage",
@@ -11,7 +15,7 @@ export default async function CustomersPage() {
 
   const supabase = await createClient();
 
-  const { data: customers, error } = await supabase
+  const { data: customersRows, error } = await supabase
     .from("customers")
     .select(`
       id,
@@ -20,10 +24,13 @@ export default async function CustomersPage() {
       phone,
       email,
       customer_type,
-      is_active,
-      created_at
+      is_active
     `)
-    .order("full_name");
+    .order("full_name")
+    .order("id")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const customers = customersRows?.slice(0, PAGE_SIZE);
 
   if (error) {
     return (
@@ -115,6 +122,7 @@ export default async function CustomersPage() {
           </tbody>
         </table>
       </div>
+      <Pagination path="/customers" params={params} page={page} hasNext={(customersRows?.length ?? 0) > PAGE_SIZE} />
     </main>
   );
 }

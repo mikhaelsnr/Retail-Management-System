@@ -1,24 +1,8 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserContext } from "@/lib/get-user-context";
 import { PreferencesForm } from "@/components/preferences-form";
-import type { AppearancePreferences } from "@/components/theme-shell";
-
-const defaults: AppearancePreferences = {
-  theme: "plain_dark",
-  density: "comfortable",
-  sidebar_default: "expanded",
-};
 
 export default async function PreferencesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
-
-  const { data } = await supabase
-    .from("user_preferences")
-    .select("theme, density, sidebar_default")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const { user, preferences } = await getCurrentUserContext();
 
   return (
     <main className="p-6">
@@ -29,7 +13,7 @@ export default async function PreferencesPage() {
       </header>
       <PreferencesForm
         userId={user.id}
-        preferences={(data as AppearancePreferences | null) ?? defaults}
+        preferences={preferences}
       />
     </main>
   );

@@ -33,7 +33,7 @@ export function AddCustomerForm() {
 
     setLoading(true);
 
-    const { data, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from("customers")
       .insert({
         full_name: fullName.trim(),

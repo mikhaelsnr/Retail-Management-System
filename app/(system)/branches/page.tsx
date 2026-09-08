@@ -10,29 +10,14 @@ type BranchesPageProps = {
 export default async function BranchesPage({
   searchParams,
 }: BranchesPageProps) {
-  await requirePermission(["branches.view_all"]);
+  const { permissions } = await requirePermission(["branches.view_all"]);
 
   const supabase = await createClient();
   const params = await searchParams;
-  const [{ data: branches, error }, { data: canManageBranches }] =
-    await Promise.all([
-      supabase
-        .from("branches")
-        .select(`
-          id,
-          code,
-          name,
-          address,
-          phone,
-          email,
-          is_active,
-          created_at
-        `)
-        .order("name"),
-      supabase.rpc("has_permission", {
-        p_permission: "branches.manage",
-      }),
-    ]);
+  const canManageBranches = permissions.includes("branches.manage");
+  const { data: branches, error } = await supabase.from("branches")
+    .select("id, code, name, address, phone, email, is_active, created_at")
+    .order("name");
 
   return (
     <main className="p-6">
